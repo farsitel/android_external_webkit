@@ -206,7 +206,7 @@ void Font::drawComplexText(GraphicsContext* gc, TextRun const& run,
     // go to chars, instead of glyphs, which was set by setupForText()
     paint.setTextEncoding(SkPaint::kUTF16_TextEncoding);
 
-    canvas->drawText(run.characters(), run.length() << 1,
+    canvas->drawText(run.shapedCharacters(), run.length() << 1,
                      SkFloatToScalar(point.x()), SkFloatToScalar(point.y()),
                      paint);
 }

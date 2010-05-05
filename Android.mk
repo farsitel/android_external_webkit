@@ -89,6 +89,8 @@ LOCAL_C_INCLUDES := \
 	$(JNI_H_INCLUDE) \
 	$(LOCAL_PATH)/WebKit/android/icu \
 	external/ \
+    external/fribidi/lib \
+    external/fribidi/charset \
 	external/icu4c/common \
 	external/icu4c/i18n \
 	external/libxml2/include \
@@ -288,7 +290,9 @@ LOCAL_SHARED_LIBRARIES := \
 	libicuuc \
 	libicudata \
 	libicui18n \
-	libmedia
+	libmedia \
+	libfribidilib \
+	libfribidics
 
 ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
     LOCAL_SHARED_LIBRARIES += \

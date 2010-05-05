@@ -26,6 +26,9 @@
 
 #include "PlatformString.h"
 
+#include <wchar.h>
+#include <fribidi.h>
+
 namespace WebCore {
 
 class RenderObject;
@@ -101,6 +104,42 @@ public:
     SVGPaintServer* activePaintServer() const { return m_activePaintServer; }
     void setActivePaintServer(SVGPaintServer* object) { m_activePaintServer = object; }
 #endif
+
+    const UChar* shapedCharacters() const {
+        size_t len = wcslen((wchar_t *) m_characters);
+
+        FriBidiCharType *btypes;
+        FriBidiLevel *embedding_levels;
+        FriBidiJoiningType *jtypes;
+        FriBidiParType pbase;
+        UChar* m_shaped_characters;
+
+        if (m_rtl)
+            pbase = FRIBIDI_PAR_RTL;
+        else
+            pbase = FRIBIDI_PAR_LTR;
+
+        m_shaped_characters = (UChar *)malloc(sizeof(UChar) * len);
+        wcscpy((wchar_t *) m_shaped_characters, (wchar_t *) m_characters);
+
+        btypes = (FriBidiCharType *)malloc(sizeof(FriBidiCharType) * len);
+        embedding_levels = (FriBidiLevel *)malloc(sizeof(FriBidiLevel) * len);
+        jtypes = (FriBidiJoiningType *)malloc(sizeof(FriBidiJoiningType) * len);
+
+        fribidi_get_bidi_types((FriBidiChar *) m_shaped_characters, len, btypes);
+        fribidi_get_par_embedding_levels(btypes, len, &pbase, embedding_levels);
+
+        fribidi_get_joining_types((FriBidiChar *) m_shaped_characters, len, jtypes);
+        fribidi_join_arabic(btypes, len, embedding_levels, jtypes);
+//        fribidi_shape(FRIBIDI_FLAGS_DEFAULT | FRIBIDI_FLAGS_ARABIC, embedding_levels, len, jtypes, (FriBidiChar *) m_shaped_characters);
+
+        free(jtypes);
+        free(btypes);
+        free(embedding_levels);
+        return m_shaped_characters;
+    }
+
+
 
 private:
     const UChar* m_characters;
