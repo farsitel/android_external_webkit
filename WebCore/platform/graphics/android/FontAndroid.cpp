@@ -184,7 +184,7 @@ FloatRect Font::selectionRectForComplexText(const TextRun& run,
 
     primaryFont()->platformData().setupPaint(&paint);
 
-    width = paint.measureText(run.characters(), run.length() << 1);
+    width = paint.measureText(run.shapedCharacters(), run.length() << 1);
     SkScalar spacing = paint.getFontMetrics(&metrics);
     
     return FloatRect(point.x(),
@@ -219,7 +219,7 @@ float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFon
 
 //printf("--------- complext measure %d chars\n", run.to() - run.from());
 
-    SkScalar width = paint.measureText(run.characters(), run.length() << 1);
+    SkScalar width = paint.measureText(run.shapedCharacters(), run.length() << 1);
     return SkScalarToFloat(width);
 }
 
@@ -233,7 +233,7 @@ int Font::offsetForPositionForComplexText(const TextRun& run, int x,
 
     primaryFont()->platformData().setupPaint(&paint);
 
-    count = paint.getTextWidths(run.characters(), count << 1, widths);
+    count = paint.getTextWidths(run.shapedCharacters(), count << 1, widths);
 
     if (count > 0)
     {

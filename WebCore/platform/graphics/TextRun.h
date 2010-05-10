@@ -26,8 +26,8 @@
 
 #include "PlatformString.h"
 
-#include <wchar.h>
 #include <fribidi.h>
+#include <fribidi-char-sets.h>
 
 namespace WebCore {
 
@@ -106,38 +106,54 @@ public:
 #endif
 
     const UChar* shapedCharacters() const {
-        size_t len = wcslen((wchar_t *) m_characters);
-
         FriBidiCharType *btypes;
         FriBidiLevel *embedding_levels;
         FriBidiJoiningType *jtypes;
         FriBidiParType pbase;
+        FriBidiChar *fribidi_characters;
         UChar* m_shaped_characters;
+        char *utf8_characters;
+        int32_t len;
 
         if (m_rtl)
             pbase = FRIBIDI_PAR_RTL;
         else
             pbase = FRIBIDI_PAR_LTR;
 
-        m_shaped_characters = (UChar *)malloc(sizeof(UChar) * len);
-        wcscpy((wchar_t *) m_shaped_characters, (wchar_t *) m_characters);
+        len = (m_len + 1) << 2;
+        utf8_characters = (char *)malloc(len);
+        UErrorCode pErrorCode = U_ZERO_ERROR;
+        u_strToUTF8(utf8_characters, len, &len, m_characters, m_len, &pErrorCode);
 
-        btypes = (FriBidiCharType *)malloc(sizeof(FriBidiCharType) * len);
-        embedding_levels = (FriBidiLevel *)malloc(sizeof(FriBidiLevel) * len);
-        jtypes = (FriBidiJoiningType *)malloc(sizeof(FriBidiJoiningType) * len);
+        fribidi_characters = (FriBidiChar *)malloc(sizeof(FriBidiChar) * m_len);
+        len = fribidi_charset_to_unicode(FRIBIDI_CHAR_SET_UTF8, utf8_characters, len, fribidi_characters);
 
-        fribidi_get_bidi_types((FriBidiChar *) m_shaped_characters, len, btypes);
-        fribidi_get_par_embedding_levels(btypes, len, &pbase, embedding_levels);
+        btypes = (FriBidiCharType *)malloc(sizeof(FriBidiCharType) * m_len);
+        embedding_levels = (FriBidiLevel *)malloc(sizeof(FriBidiLevel) * m_len);
+        jtypes = (FriBidiJoiningType *)malloc(sizeof(FriBidiJoiningType) * m_len);
 
-        fribidi_get_joining_types((FriBidiChar *) m_shaped_characters, len, jtypes);
-        fribidi_join_arabic(btypes, len, embedding_levels, jtypes);
-//        fribidi_shape(FRIBIDI_FLAGS_DEFAULT | FRIBIDI_FLAGS_ARABIC, embedding_levels, len, jtypes, (FriBidiChar *) m_shaped_characters);
+        fribidi_get_bidi_types(fribidi_characters, m_len, btypes);
+        fribidi_get_par_embedding_levels(btypes, m_len, &pbase, embedding_levels);
+
+        fribidi_get_joining_types((FriBidiChar *) fribidi_characters, m_len, jtypes);
+        fribidi_join_arabic(btypes, m_len, embedding_levels, jtypes);
+        fribidi_shape(FRIBIDI_FLAGS_DEFAULT | FRIBIDI_FLAGS_ARABIC, embedding_levels, m_len, jtypes, fribidi_characters);
+
+        len = fribidi_unicode_to_charset(FRIBIDI_CHAR_SET_UTF8, fribidi_characters, len, utf8_characters);
+
+        m_shaped_characters = (UChar *)malloc(sizeof(UChar) * (m_len+1));
+        u_strFromUTF8(m_shaped_characters, sizeof(UChar) * (m_len+1), NULL, utf8_characters, len, &pErrorCode);
+        m_shaped_characters[m_len] = '\0';
 
         free(jtypes);
         free(btypes);
         free(embedding_levels);
+        free(utf8_characters);
+        free(fribidi_characters);
         return m_shaped_characters;
     }
+///        memcpy(m_shaped_characters, m_characters, (m_len << 1));
+///        m_shaped_characters[m_len] = '\0';
 
 
 
