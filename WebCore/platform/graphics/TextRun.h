@@ -39,6 +39,7 @@ public:
     TextRun(const UChar* c, int len, bool allowTabs = false, int xpos = 0, int padding = 0, bool rtl = false, bool directionalOverride = false,
               bool applyRunRounding = true, bool applyWordRounding = true)
         : m_characters(c)
+        , m_shaped_characters(NULL)
         , m_len(len)
         , m_xpos(xpos)
         , m_padding(padding)
@@ -53,11 +54,13 @@ public:
         , m_activePaintServer(0)
 #endif
     {
+        doShapeCharacters();
     }
 
     TextRun(const String& s, bool allowTabs = false, int xpos = 0, int padding = 0, bool rtl = false, bool directionalOverride = false,
               bool applyRunRounding = true, bool applyWordRounding = true)
         : m_characters(s.characters())
+        , m_shaped_characters(NULL)
         , m_len(s.length())
         , m_xpos(xpos)
         , m_padding(padding)
@@ -72,6 +75,7 @@ public:
         , m_activePaintServer(0)
 #endif
     {
+        doShapeCharacters();
     }
 
     UChar operator[](int i) const { return m_characters[i]; }
@@ -80,7 +84,10 @@ public:
     const UChar* characters() const { return m_characters; }
     int length() const { return m_len; }
 
-    void setText(const UChar* c, int len) { m_characters = c; m_len = len; }
+    void setText(const UChar* c, int len) { 
+        m_characters = c; m_len = len; 
+        doShapeCharacters();
+    }
 
     bool allowTabs() const { return m_allowTabs; }
     int xPos() const { return m_xpos; }
@@ -105,14 +112,12 @@ public:
     void setActivePaintServer(SVGPaintServer* object) { m_activePaintServer = object; }
 #endif
 
-    const UChar* shapedCharacters() const {
+    void doShapeCharacters() {
         FriBidiCharType *btypes;
         FriBidiLevel *embedding_levels;
         FriBidiJoiningType *jtypes;
         FriBidiParType pbase;
         FriBidiChar *fribidi_characters;
-        UChar* m_shaped_characters;
-        char *utf8_characters;
         int32_t len;
 
         if (m_rtl)
@@ -121,12 +126,9 @@ public:
             pbase = FRIBIDI_PAR_LTR;
 
         len = (m_len + 1) << 2;
-        utf8_characters = (char *)malloc(len);
+        fribidi_characters = (FriBidiChar *)malloc(len);
         UErrorCode pErrorCode = U_ZERO_ERROR;
-        u_strToUTF8(utf8_characters, len, &len, m_characters, m_len, &pErrorCode);
-
-        fribidi_characters = (FriBidiChar *)malloc(sizeof(FriBidiChar) * m_len);
-        len = fribidi_charset_to_unicode(FRIBIDI_CHAR_SET_UTF8, utf8_characters, len, fribidi_characters);
+        u_strToUTF32((UChar32 *)fribidi_characters, len, &len, m_characters, m_len, &pErrorCode);
 
         btypes = (FriBidiCharType *)malloc(sizeof(FriBidiCharType) * m_len);
         embedding_levels = (FriBidiLevel *)malloc(sizeof(FriBidiLevel) * m_len);
@@ -139,26 +141,26 @@ public:
         fribidi_join_arabic(btypes, m_len, embedding_levels, jtypes);
         fribidi_shape(FRIBIDI_FLAGS_DEFAULT | FRIBIDI_FLAGS_ARABIC, embedding_levels, m_len, jtypes, fribidi_characters);
 
-        len = fribidi_unicode_to_charset(FRIBIDI_CHAR_SET_UTF8, fribidi_characters, len, utf8_characters);
+        fribidi_reorder_line(FRIBIDI_FLAGS_DEFAULT, btypes, m_len, 0, pbase, embedding_levels, fribidi_characters, NULL);
 
         m_shaped_characters = (UChar *)malloc(sizeof(UChar) * (m_len+1));
-        u_strFromUTF8(m_shaped_characters, sizeof(UChar) * (m_len+1), NULL, utf8_characters, len, &pErrorCode);
+        u_strFromUTF32(m_shaped_characters, sizeof(UChar) * (m_len+1), NULL, (UChar32 *)fribidi_characters, len, &pErrorCode);
         m_shaped_characters[m_len] = '\0';
 
         free(jtypes);
         free(btypes);
         free(embedding_levels);
-        free(utf8_characters);
         free(fribidi_characters);
-        return m_shaped_characters;
     }
-///        memcpy(m_shaped_characters, m_characters, (m_len << 1));
-///        m_shaped_characters[m_len] = '\0';
+
+
+    const UChar* shapedCharacters() const { return m_shaped_characters; }
 
 
 
 private:
     const UChar* m_characters;
+    UChar* m_shaped_characters;
     int m_len;
 
     int m_xpos;
