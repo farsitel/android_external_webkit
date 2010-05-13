@@ -141,7 +141,8 @@ public:
         fribidi_join_arabic(btypes, m_len, embedding_levels, jtypes);
         fribidi_shape(FRIBIDI_FLAGS_DEFAULT | FRIBIDI_FLAGS_ARABIC, embedding_levels, m_len, jtypes, fribidi_characters);
 
-        fribidi_reorder_line(FRIBIDI_FLAGS_DEFAULT, btypes, m_len, 0, pbase, embedding_levels, fribidi_characters, NULL);
+        fribidi_reorder_line(FRIBIDI_FLAG_SHAPE_MIRRORING | FRIBIDI_FLAG_REMOVE_SPECIALS, \
+                             btypes, m_len, 0, pbase, embedding_levels, fribidi_characters, NULL);
 
         m_shaped_characters = (UChar *)malloc(sizeof(UChar) * (m_len+1));
         u_strFromUTF32(m_shaped_characters, sizeof(UChar) * (m_len+1), NULL, (UChar32 *)fribidi_characters, len, &pErrorCode);
